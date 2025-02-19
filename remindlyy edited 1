@@ -1,0 +1,105 @@
+import { useState, useEffect } from "react";
+import ReminderCard from "@/components/ReminderCard";
+import AddReminderDialog from "@/components/AddReminderDialog";
+import { useToast } from "@/components/ui/use-toast";
+
+interface Reminder {
+  id: string;
+  type: "credit-card" | "phone-bill" | "free-trial";
+  title: string;
+  dueDate: Date;
+}
+
+const LOCAL_STORAGE_KEY = "reminders";
+
+const Index = () => {
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const { toast } = useToast();
+
+  // Load reminders from local storage on component mount
+  useEffect(() => {
+    const savedReminders = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (savedReminders) {
+      setReminders(JSON.parse(savedReminders));
+    }
+  }, []);
+
+  // Save reminders to local storage whenever they change
+  useEffect(() => {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(reminders));
+  }, [reminders]);
+
+  const handleAddReminder = (reminder: Omit<Reminder, "id">) => {
+    try {
+      const newReminder = {
+        ...reminder,
+        id: crypto.randomUUID(), // Generate a unique ID for the reminder
+      };
+      setReminders((prev) => [...prev, newReminder]);
+      toast({
+        title: "Reminder created",
+        description: "Your reminder has been successfully created.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create reminder. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteReminder = (id: string) => {
+    try {
+      setReminders((prev) => prev.filter((reminder) => reminder.id !== id));
+      toast({
+        title: "Reminder deleted",
+        description: "Your reminder has been successfully deleted.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete reminder. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-gray-50 via-gray-50/80 to-white px-4 py-12">
+      <div className="mx-auto w-full max-w-4xl rounded-[2.5rem] bg-white/80 p-12 shadow-xl backdrop-blur-sm ring-1 ring-gray-100">
+        <div className="mb-16 text-center">
+          <h1 className="mb-6 text-5xl font-bold tracking-tight text-gray-900 bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+            Remindly
+          </h1>
+          <p className="text-lg text-gray-600 font-medium">
+            Never miss an important payment or subscription deadline again.
+          </p>
+        </div>
+
+        <div className="mb-12 flex justify-center">
+          <AddReminderDialog onAdd={handleAddReminder} />
+        </div>
+
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          {reminders.map((reminder) => (
+            <ReminderCard
+              key={reminder.id}
+              type={reminder.type}
+              title={reminder.title}
+              dueDate={reminder.dueDate}
+              onDelete={() => handleDeleteReminder(reminder.id)}
+            />
+          ))}
+          {reminders.length === 0 && (
+            <div className="col-span-full text-center p-12">
+              <p className="text-gray-500 font-medium">No reminders yet. Create your first one!</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Index;
